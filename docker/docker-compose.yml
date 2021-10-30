@@ -1,0 +1,72 @@
+# GIT INTEGRATION
+version: '3.8'
+services:
+  mozio_redis:
+    image: redis:latest
+    restart: always
+    container_name: 'mozio_redis'
+    ports:
+      - "6379:6379"
+
+  mozioPostgresql:
+    image: mdillon/postgis
+    restart: always
+    container_name: 'mozioPostgresql'
+    environment:
+      POSTGRES_USER: mozio
+      POSTGRES_PASSWORD: mozio
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_mozio_data:/var/lib/postgresql/data
+
+  mozio_celery:
+    image: celery:latest
+    restart: always
+    container_name: 'mozio_celery'
+    environment:
+     CELERY_BROKER_URL: redis://mozio_redis:6379/0
+    depends_on:
+      - mozio_redis
+
+  mozioApi:
+    build:
+      context: ./
+      dockerfile: api.dockerfile
+    image: "mozioapi:latest"
+    container_name: 'mozioApi'
+    command:
+      - gunicorn
+      - mozio.wsgi:application
+      - --workers 3
+      - --bind
+      - 0.0.0.0:8000
+    volumes:
+      - ../.staticfiles:/code/.staticfiles:rw
+      - ../.media:/code/.media:rw
+      - ../:/code/
+    depends_on:
+      - mozio_celery
+      - mozioPostgresql
+    ports:
+      - "8000:8000"
+    stdin_open: true
+    tty: true
+
+  mozio_nginx:
+    restart: always
+    build: ./nginx/
+    ports:
+      - "80:80"
+    volumes:
+      - ../.staticfiles:/code/.staticfiles
+      - ../.media:/code/.media
+      - nginx_volume:/usr/share/nginx/html
+    depends_on:
+      - mozioApi
+
+volumes:
+  postgres_mozio_data:
+  static_volume:
+  media_volume:
+  nginx_volume:

@@ -1,0 +1,9 @@
+Django==2.2.24
+django-environ==0.4.5
+django-redis==4.10.0
+django-extensions==2.1.7
+djangorestframework==3.12.4
+gunicorn
+django-phonenumber-field[phonenumberslite]
+psycopg2-binary==2.8.6
+ipdb
